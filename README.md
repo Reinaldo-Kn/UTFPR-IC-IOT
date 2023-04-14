@@ -8,4 +8,5 @@ a partir do IOT automatizar a captura de dados importantes e relatar isso atrav√
 ## Autores
 
 - [@Reinaldo-Kn](https://www.github.com/Reinaldo-Kn)
+- [@EduPras](https://www.github.com/EduPras)
 
