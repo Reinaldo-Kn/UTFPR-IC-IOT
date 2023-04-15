@@ -23,9 +23,10 @@ services:
     volumes:
       - ./config/mongo/config/mongod.conf:/etc/mongod/mongod.conf
       - ./config/mongo/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/
-      - mongodb_volume:/data/db
     ports:
       - "27017:27017"
+    expose:
+      - 27017
     healthcheck:
       test: test $$(echo "rs.initiate().ok || rs.status().ok" | mongo -u admin -p 'sentilo' --quiet) -eq 1
       interval: 10s
@@ -43,6 +44,13 @@ services:
     ports:
       - "8081:8081"
       - "7081:7081"
+    expose:
+      - 8081
+      - 7081
+    links:
+      - sentilo-redis
+      - sentilo-mongodb
+      - sentilo-catalog-web
     depends_on:
       - sentilo-catalog-web
     networks:
@@ -54,6 +62,8 @@ services:
     volumes:
       - ./conf/:/etc/sentilo/
       - ./logs/:/var/log/sentilo/
+    links:
+      - sentilo-platform-server
     depends_on:
       - sentilo-platform-server
     networks:
@@ -65,6 +75,8 @@ services:
     volumes:
       - ./conf/:/etc/sentilo/
       - ./logs/:/var/log/sentilo/
+    links:
+      - sentilo-platform-server
     depends_on:
       - sentilo-platform-server
     networks:
@@ -75,6 +87,11 @@ services:
     container_name: sentilo-catalog-web
     ports:
       - "8080:8080"
+    expose:
+      - 8080
+    links:
+      - sentilo-mongodb
+      - sentilo-redis
     depends_on:
       - sentilo-mongodb
       - sentilo-redis
