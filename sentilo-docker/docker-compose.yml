@@ -23,6 +23,7 @@ services:
     volumes:
       - ./config/mongo/config/mongod.conf:/etc/mongod/mongod.conf
       - ./config/mongo/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/
+      - mongodb_volume:/data/db
     ports:
       - "27017:27017"
     healthcheck:
@@ -82,7 +83,8 @@ services:
       - ./logs/:/var/log/sentilo/
     networks:
       - sentilo_network
-  
+      
+  # ELK STACK compose setup
   elasticsearch:
     image: elasticsearch:8.7.0
     container_name: elasticsearch
@@ -128,6 +130,9 @@ volumes:
   redis_volume:
     driver: local
     name: redis_volume
+  mongodb_volume:
+    driver: local
+    name: mongodb_volume
   
 
 networks:
