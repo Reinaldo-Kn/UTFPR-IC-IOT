@@ -100,6 +100,13 @@ services:
       - ./logs/:/var/log/sentilo/
     networks:
       - sentilo_network
+    
+  sentilo-endpoint:
+    image: sentilo-endpoint
+    ports:
+    - 5000:5000
+    networks:
+      - sentilo_network
       
   # ELK STACK compose setup
   elasticsearch:

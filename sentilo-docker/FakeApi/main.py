@@ -9,4 +9,4 @@ while(True):
     rand = randint(10,35)
     fake_temp_sensor.send_data(rand)
     print(rand)
-    sleep(5)
+    sleep(30)
