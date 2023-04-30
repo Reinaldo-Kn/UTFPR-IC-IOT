@@ -1,0 +1,176 @@
+services:
+      
+  sentilo-redis:
+    image: redis/redis-stack:${REDIS_VERSION}
+    container_name: sentilo-redis
+    # command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--appendonly", "yes"]
+    volumes:
+      # - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - redis_volume:/data
+    ports:
+      - 6379:6379
+      - 8001:8001
+    networks:
+      - sentilo_network
+               
+  sentilo-mongodb:
+    image: mongo:${MONGO_VERSION}
+    container_name: sentilo-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: sentilo
+      MONGO_INITDB_DATABASE: sentilo
+    volumes:
+      - ./config/mongo/config/mongod.conf:/etc/mongod/mongod.conf
+      - ./config/mongo/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/
+      # - mongodb_volume:/data/db
+    ports:
+      - "27017:27017"
+    expose:
+      - 27017
+    healthcheck:
+      test: test $$(echo "rs.initiate().ok || rs.status().ok" | mongo -u admin -p 'sentilo' --quiet) -eq 1
+      interval: 10s
+      start_period: 5s
+    command: [ "--replSet", "rs_sentilo", "--bind_ip_all" ]
+    networks:
+      - sentilo_network
+      
+  sentilo-platform-server:
+    image: sentilo/sentilo-platform-server:${SENTILO_VERSION}
+    container_name: sentilo-platform-server
+    volumes:
+      - ./conf/:/etc/sentilo/
+      - ./logs/:/var/log/sentilo/
+    ports:
+      - "8081:8081"
+      - "7081:7081"
+    expose:
+      - 8081
+      - 7081
+    links:
+      - sentilo-redis
+      - sentilo-mongodb
+      - sentilo-catalog-web
+    depends_on:
+      sentilo-catalog-web:
+        condition: service_healthy
+    networks:
+      - sentilo_network
+      
+  sentilo-agent-alert:
+    image: sentilo/sentilo-agent-alert:${SENTILO_VERSION}
+    container_name: sentilo-agent-alert
+    volumes:
+      - ./conf/:/etc/sentilo/
+      - ./logs/:/var/log/sentilo/
+    links:
+      - sentilo-platform-server
+    depends_on:
+      - sentilo-platform-server
+    networks:
+      - sentilo_network
+      
+  sentilo-agent-location-updater:
+    image: sentilo/sentilo-agent-location-updater:${SENTILO_VERSION}
+    container_name: sentilo-agent-location-updater
+    volumes:
+      - ./conf/:/etc/sentilo/
+      - ./logs/:/var/log/sentilo/
+    links:
+      - sentilo-platform-server
+    depends_on:
+      - sentilo-platform-server
+    networks:
+      - sentilo_network
+
+  sentilo-catalog-web:
+    image: sentilo/sentilo-catalog-web:${SENTILO_VERSION}
+    container_name: sentilo-catalog-web
+    ports:
+      - "8080:8080"
+    expose:
+      - 8080
+    links:
+      - sentilo-mongodb
+      - sentilo-redis
+    depends_on:
+      sentilo-mongodb:
+        condition: service_healthy
+      sentilo-redis:
+        condition: service_started
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://sentilo-catalog-web:8080/sentilo-catalog-web/ || exit 1 
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 0s
+    volumes:
+      - ./conf/:/etc/sentilo/
+      - ./logs/:/var/log/sentilo/
+    networks:
+      - sentilo_network
+    
+  sentilo-endpoint:
+    image: sentilo-endpoint
+    ports:
+    - 5000:5000
+    networks:
+      - sentilo_network
+      
+  # ELK STACK compose setup
+  elasticsearch:
+    image: elasticsearch:8.7.0
+    container_name: elasticsearch
+    ports:
+    - 9200:9200
+    volumes:
+      - es01:/usr/share/elasticsearch/data
+    networks:
+      - sentilo_network
+    environment:
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+
+  kibana:
+    container_name: kibana
+    image: kibana:8.7.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+    networks:
+      - sentilo_network
+
+  logstash:
+    container_name: logstash
+    image: logstash:8.7.0
+    volumes:
+      - ./config/logstash:/usr/share/logstash/pipeline
+    environment:
+      - "LS_JAVA_OPTS=-Xms256m -Xmx256m"
+    restart: always
+    networks:
+      - sentilo_network
+
+volumes:
+  es01:
+    driver: local
+    name: es01
+  redis_volume:
+    driver: local
+    name: redis_volume
+  mongodb_volume:
+    driver: local
+    name: mongodb_volume
+  
+
+networks:
+  sentilo_network:
+    ipam:
+      driver: default
+  
