@@ -12,10 +12,11 @@ class FakeSensor:
         self.provider_token = provider_token
         self.provider = provider
         self.headers = {
-            "IDENTITY_KEY": self.provider_token
+            "IDENTITY_KEY": self.provider_token,
+            'Content-Type': 'application/json'
         }
 
     def send_data(self, data):
-        url = f'{URL_API}data/{self.provider}/{self.sensor}/{data}'
-        r = requests.put(url=url, headers=self.headers)
+        url = f'{URL_API}data/{self.provider}/{self.sensor}'
+        r = requests.put(url=url, headers=self.headers, json=data)
         print(r.status_code)
