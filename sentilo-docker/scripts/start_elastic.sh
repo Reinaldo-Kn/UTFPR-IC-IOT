@@ -1,0 +1,1 @@
+docker-compose up ../elasticsearch/docker-compose.yml

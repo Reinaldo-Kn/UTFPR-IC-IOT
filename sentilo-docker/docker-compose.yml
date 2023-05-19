@@ -173,4 +173,3 @@ networks:
   sentilo_network:
     ipam:
       driver: default
-  
