@@ -7,8 +7,9 @@ ID_KEY = os.getenv("ID_KEY")
 URL_API = os.getenv("URL_API")
 
 class FakeSensor:
-    def __init__(self, provider_token, provider, sensor):
+    def __init__(self, provider_token, provider, sensor, location):
         self.sensor = sensor
+        self.location = location
         self.provider_token = provider_token
         self.provider = provider
         self.headers = {
@@ -17,6 +18,14 @@ class FakeSensor:
         }
 
     def send_data(self, data):
+        json = {
+            "observations":[{
+            "value": data,
+            "location": self.location
+        }]
+        }
         url = f'{URL_API}data/{self.provider}/{self.sensor}'
-        r = requests.put(url=url, headers=self.headers, json=data)
-        print(r.status_code)
+        r = requests.put(url=url, headers=self.headers, json=json)
+        print(f'\n\
+        Status code: {r.status_code}\n\
+        Sensor: {self.sensor}\t value: {data}\n') 
